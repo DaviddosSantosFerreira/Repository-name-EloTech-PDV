@@ -1,0 +1,20 @@
+'use client';
+
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { AuthSessionProvider } from '@/contexts/AuthSessionContext';
+import { ProfileProvider } from '@/contexts/ProfileContext';
+import { PermissionProvider } from '@/contexts/PermissionContext';
+
+export default function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <AuthSessionProvider>
+        <ProfileProvider>
+          <PermissionProvider>
+            {children}
+          </PermissionProvider>
+        </ProfileProvider>
+      </AuthSessionProvider>
+    </ErrorBoundary>
+  );
+}
