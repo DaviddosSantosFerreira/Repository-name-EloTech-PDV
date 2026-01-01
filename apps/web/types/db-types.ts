@@ -18,3 +18,5 @@ export type UpdateProfile = Database['public']['Tables']['profiles']['Update'];
 
 
 
+
+
