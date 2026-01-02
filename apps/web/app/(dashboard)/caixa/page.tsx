@@ -50,7 +50,8 @@ export default function CaixaPage() {
         .limit(1)
 
       if (error) {
-        console.error(error)
+        console.error('Erro ao verificar status do caixa:', error)
+        setStatus('closed')
         setLoading(false)
         return
       }
