@@ -20,7 +20,7 @@ export default function CaixaPage() {
   const supabase = getBrowserClient()
 
   const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState<CashStatus>('closed')
+  const [status, setStatus] = useState<CashStatus | null>(null)
 
   const [initialAmount, setInitialAmount] = useState('')
 
@@ -79,7 +79,7 @@ export default function CaixaPage() {
   /* ===========================
      LOADING
      =========================== */
-  if (loading) {
+  if (loading || status === null) {
     return <p style={{ padding: 32 }}>Carregando caixa...</p>
   }
 
