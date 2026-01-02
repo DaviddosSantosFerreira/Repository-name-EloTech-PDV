@@ -42,8 +42,9 @@ export default function CaixaPage() {
     const load = async () => {
       const { data: openCash, error } = await supabase
         .from('cash_registers')
-        .select('id')
-        .eq('status', 'open')
+        .select('id, status, opened_at, closed_at')
+        .is('closed_at', null)
+        .order('opened_at', { ascending: false })
         .limit(1)
 
       if (error) {
