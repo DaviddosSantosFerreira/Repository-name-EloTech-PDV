@@ -154,3 +154,7 @@ CREATE POLICY "Authenticated users can insert sale_items"
 
 
 
+
+
+
+

@@ -1,19 +1,142 @@
 # AI Context - EloTech PDV
 
 > 📚 **Documentação Técnica Completa:** Para análise detalhada da arquitetura, mapeamento de rotas, análise de riscos e recomendações, veja [DOCUMENTACAO_TECNICA.md](./DOCUMENTACAO_TECNICA.md)  
-> 🔍 **Auditoria Arquitetural:** Para análise crítica de inconsistências, decisões arriscadas, acoplamento excessivo e melhorias de alto impacto, veja [AUDITORIA_ARQUITETURAL.md](./AUDITORIA_ARQUITETURAL.md)
+> 🔍 **Auditoria Arquitetural:** Para análise crítica de inconsistências, decisões arriscadas, acoplamento excessivo e melhorias de alto impacto, veja [AUDITORIA_ARQUITETURAL.md](./AUDITORIA_ARQUITETURAL.md)  
+> 🤖 **Governança de IAs:** Para protocolos de uso de múltiplas IAs, veja [apps/web/app/(dashboard)/caixa/docs/Governance_IA.md](./apps/web/app/(dashboard)/caixa/docs/Governance_IA.md)
 
 ## 📋 Índice
 
-1. [Arquitetura de Autenticação](#arquitetura-de-autenticação)
-2. [Correções Críticas Implementadas](#correções-críticas-implementadas)
-3. [Estrutura de Providers](#estrutura-de-providers)
-4. [Repository Pattern](#repository-pattern)
-5. [Estrutura de Layouts](#estrutura-de-layouts)
-6. [Componentes UI](#componentes-ui)
-7. [Hooks e Compatibilidade](#hooks-e-compatibilidade)
-8. [Store e Cache](#store-e-cache)
-9. [Configuração do Projeto](#configuração-do-projeto)
+1. [Estrutura Real do Projeto](#estrutura-real-do-projeto)
+2. [Configuração de Ambiente](#configuração-de-ambiente)
+3. [Arquitetura de Autenticação](#arquitetura-de-autenticação)
+4. [Módulo /caixa - Estado Atual e Decisões](#módulo-caixa---estado-atual-e-decisões)
+5. [Correções Críticas Implementadas](#correções-críticas-implementadas)
+6. [Estrutura de Providers](#estrutura-de-providers)
+7. [Repository Pattern](#repository-pattern)
+8. [Estrutura de Layouts](#estrutura-de-layouts)
+9. [Componentes UI](#componentes-ui)
+10. [Hooks e Compatibilidade](#hooks-e-compatibilidade)
+11. [Store e Cache](#store-e-cache)
+12. [Configuração do Projeto](#configuração-do-projeto)
+13. [Governança de IAs](#governança-de-ias)
+14. [Próximos Passos Imediatos](#próximos-passos-imediatos)
+
+---
+
+## 🏗️ Estrutura Real do Projeto
+
+### ⚠️ IMPORTANTE: Monorepo com Next.js em `/apps/web`
+
+**O projeto está estruturado como monorepo. O Next.js roda APENAS em `/apps/web`.**
+
+### Estrutura Confirmada (Verificada por Inspeção)
+
+```
+EloTech-pdv/                          ← Raiz do repositório
+ └─ apps/
+    └─ web/                           ← APENAS AQUI roda o Next.js
+       ├─ package.json                ← package.json válido
+       ├─ middleware.ts               ← middleware do Next.js
+       ├─ .env.local                  ← Variáveis de ambiente (deve estar AQUI)
+       ├─ next.config.js
+       ├─ tsconfig.json
+       ├─ app/                        ← App Router do Next.js
+       │  ├─ layout.tsx
+       │  ├─ (dashboard)/
+       │  │  ├─ layout.tsx
+       │  │  ├─ page.tsx
+       │  │  └─ caixa/
+       │  │     ├─ page.tsx          ← Server Component
+       │  │     ├─ CaixaClient.tsx   ← Client Component
+       │  │     ├─ components/
+       │  │     │  ├─ AberturaDeCaixa.tsx
+       │  │     │  └─ FechamentoDeCaixa.tsx
+       │  │     └─ historico/
+       │  │        └─ page.tsx
+       │  └─ (auth)/
+       │     ├─ login/
+       │     └─ register/
+       ├─ components/
+       ├─ contexts/
+       ├─ hooks/
+       ├─ lib/
+       │  ├─ repositories/
+       │  └─ supabase/
+       │     ├─ browser.ts
+       │     ├─ server.ts
+       │     └─ middleware.ts
+       └─ types/
+```
+
+### Comandos Corretos para Desenvolvimento
+
+```bash
+# ✅ CORRETO: Executar de dentro de apps/web
+cd apps/web
+npm run dev
+
+# ❌ ERRADO: Executar da raiz do projeto
+npm run dev  # Isso falhará - package.json não existe na raiz
+```
+
+### Erros Comuns Resolvidos
+
+**Erro: "Cannot find module" ou "Your project's URL and Key are required"**
+- **Causa:** Executar `npm run dev` fora do diretório `/apps/web`
+- **Solução:** Sempre executar de dentro de `apps/web`
+- **Verificação:** `package.json` existe APENAS em `apps/web/package.json`
+
+**Erro: Variáveis de ambiente não carregadas**
+- **Causa:** `.env.local` não está no mesmo nível de `package.json`
+- **Solução:** `.env.local` deve estar em `apps/web/.env.local`
+- **Next.js carrega `.env.local` apenas do diretório raiz do projeto (onde está package.json)**
+
+---
+
+## 🔐 Configuração de Ambiente (Supabase)
+
+### Variáveis Obrigatórias
+
+**Arquivo:** `apps/web/.env.local` (deve estar no mesmo nível do `package.json`)
+
+```env
+# URLs e Chaves Públicas (Client/Browser)
+NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-anon-key-aqui
+
+# Service Role Key (APENAS Server-Side)
+SUPABASE_SERVICE_ROLE_KEY=sua-service-role-key-aqui
+```
+
+### Diferença Crítica: Anon Key vs Service Role Key
+
+**NEXT_PUBLIC_SUPABASE_ANON_KEY (Client/Browser):**
+- ✅ Pode ser exposta no cliente (usa `NEXT_PUBLIC_`)
+- ✅ Respeita RLS (Row Level Security)
+- ✅ Usado em: Client Components, hooks, browser
+- ✅ Seguro para uso público (RLS protege os dados)
+
+**SUPABASE_SERVICE_ROLE_KEY (Server Only):**
+- ❌ **NUNCA expor no cliente** (não usar `NEXT_PUBLIC_`)
+- ❌ Bypassa RLS (acesso completo ao banco)
+- ✅ Usado apenas em: Server Components, Server Actions, API Routes
+- ⚠️ Se exposta, permite acesso total ao banco (risco crítico de segurança)
+
+### Erro Crítico Resolvido
+
+**Sintoma:**
+```
+Error: Variáveis de ambiente do Supabase não configuradas. 
+Verifique NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+**Causa:**
+- `.env.local` não estava no diretório correto (`apps/web/.env.local`)
+- Next.js só carrega `.env.local` do diretório raiz do projeto (onde está `package.json`)
+
+**Solução:**
+- Mover `.env.local` para `apps/web/.env.local`
+- Garantir que está no mesmo nível de `package.json`
 
 ---
 
@@ -74,6 +197,117 @@ User → signOut() → Supabase Auth → onAuthStateChange → updateSession(nul
    - Verifica se já está autenticado com o mesmo usuário antes de despachar `AUTH_SUCCESS`
    - Usa `stateRef` para evitar closures stale
    - Atualiza `currentUserIdRef` síncronamente antes do dispatch
+
+---
+
+## 💰 Módulo /caixa - Estado Atual e Decisões
+
+### Estado Atual (Data: 2025-01-02)
+
+**Tabelas Envolvidas:**
+- `cash_registers` - Registros de abertura/fechamento de caixa
+- `cash_movements` - Movimentações financeiras do caixa (sangrias, etc.)
+
+**Funções RPC Existentes:**
+- `open_cash_register(p_initial_amount NUMERIC)` - Abre um novo caixa
+- `close_cash_register(p_final_cash NUMERIC, p_final_pix NUMERIC, p_final_card NUMERIC)` - Fecha o caixa
+
+**RLS (Row Level Security):**
+- ✅ RLS ativas e corrigidas para `cash_registers`
+- ✅ Policies baseadas em `opened_by = auth.uid()`
+- ✅ Usuários só acessam seus próprios caixas
+
+### Erros Enfrentados e Resolvidos
+
+#### 1. Overload de Funções RPC
+**Problema:** Conflito de assinaturas em funções RPC do Supabase
+**Solução:** Remover funções antigas antes de criar novas (DROP FUNCTION IF EXISTS)
+
+#### 2. Tipagem `never` no Supabase Client
+**Problema:** TypeScript inferia tipo `never` para tabelas não tipadas
+**Causa:** Tabela `cash_registers` não estava no tipo `Database`
+**Solução:** Adicionar tabela ao tipo `Database` ou usar casts apropriados
+
+#### 3. UI Não Atualizava Após Abertura do Caixa
+**Problema:** Client Component com `useEffect` + `router.refresh()` não sincronizava estado
+**Tentativas Frustradas:**
+- ❌ `router.refresh()` após mutação
+- ❌ `window.location.reload()` (solução temporária, não ideal)
+- ❌ Estado gerenciado no client
+
+**Conclusão Técnica:**
+> **Client Components + useEffect + router.refresh NÃO resolvem sincronização crítica de estado server-side.**
+
+### Decisão Arquitetural Final (Validada pela Manus AI)
+
+**Data da Decisão:** 2025-01-02  
+**Validado por:** Manus AI (Auditor Arquitetural)
+
+**Problema:**
+Estado "Caixa Aberto/Fechado" é crítico e deve estar sincronizado com o banco. Client Components não garantem sincronização confiável.
+
+**Solução Aprovada:**
+✅ **Server Component como fonte de verdade**  
+✅ **Server Actions para mutações**  
+✅ **Revalidação obrigatória com `revalidatePath()`**
+
+**Arquitetura Implementada:**
+
+```typescript
+// apps/web/app/(dashboard)/caixa/page.tsx (Server Component)
+export default async function CaixaPage() {
+  const supabase = await getServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // ✅ Fonte de verdade no SERVER
+  let status: 'open' | 'closed' = 'closed'
+  
+  if (user) {
+    const { data } = await supabase
+      .from('cash_registers')
+      .select('id')
+      .is('closed_at', null)
+      .eq('opened_by', user.id)
+      .limit(1)
+    
+    status = data && data.length > 0 ? 'open' : 'closed'
+  }
+  
+  // ✅ Passa estado inicial para Client Component
+  return <CaixaClient initialStatus={status} />
+}
+```
+
+```typescript
+// apps/web/app/(dashboard)/caixa/CaixaClient.tsx (Client Component)
+'use client'
+
+export function CaixaClient({ initialStatus }: { initialStatus: 'open' | 'closed' }) {
+  // ✅ Apenas UI e interações
+  // ✅ Estado crítico vem do server
+  return <div>...</div>
+}
+```
+
+**Próxima Etapa (Em Andamento):**
+- Criar Server Actions:
+  - `abrirCaixaAction`
+  - `fecharCaixaAction`
+- Usar `revalidatePath('/caixa')` após mutações
+- Remover toda lógica de estado crítico do client
+
+### Estrutura Atual do Módulo /caixa
+
+```
+apps/web/app/(dashboard)/caixa/
+├── page.tsx                    ← Server Component (fonte de verdade)
+├── CaixaClient.tsx             ← Client Component (UI apenas)
+└── components/
+    ├── AberturaDeCaixa.tsx     ← Componente de abertura (legado, será substituído)
+    └── FechamentoDeCaixa.tsx   ← Componente de fechamento (legado, será substituído)
+```
+
+**Nota:** Componentes em `components/` são legados da tentativa anterior com Client Components puros. Serão migrados para usar Server Actions.
 
 ---
 
@@ -203,6 +437,18 @@ export function createSupabaseAuthRepository(
 - `app/providers.tsx` = Client Component isolado
 - Separação clara entre Server e Client Components
 
+### 7. Erro de Estrutura do Projeto (Monorepo)
+
+**Problema:**
+- Executar `npm run dev` da raiz do projeto
+- `package.json` não existe na raiz
+- Variáveis de ambiente não carregadas
+
+**Solução:**
+- Documentar que projeto é monorepo
+- Next.js roda APENAS em `apps/web`
+- `.env.local` deve estar em `apps/web/.env.local`
+
 ---
 
 ## 🎯 Estrutura de Providers
@@ -216,7 +462,6 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthSessionProvider } from '@/contexts/AuthSessionContext';
 import { ProfileProvider } from '@/contexts/ProfileContext';
 import { PermissionProvider } from '@/contexts/PermissionContext';
-import { AuthGate } from '@/components/auth/AuthGate';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -224,7 +469,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <AuthSessionProvider>
         <ProfileProvider>
           <PermissionProvider>
-            <AuthGate>{children}</AuthGate>
+            {children}
           </PermissionProvider>
         </ProfileProvider>
       </AuthSessionProvider>
@@ -237,8 +482,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 - Client Component (`'use client'`)
 - Export default (não named export)
 - Hierarquia completa de providers
-- `AuthGate` global (gerencia loading para todas as rotas)
 - `ErrorBoundary` global (captura erros em toda a aplicação)
+- **Nota:** `AuthGate` removido (estava causando problemas)
 
 ### ProfileProvider
 
@@ -551,6 +796,8 @@ export const saleStore = {
 
 ### package.json
 
+**Localização:** `apps/web/package.json`
+
 **Dependências Principais:**
 - `next: 14.0.4`
 - `react: ^18.2.0`
@@ -558,6 +805,7 @@ export const saleStore = {
 - `@supabase/supabase-js: ^2.89.0`
 - `tailwindcss: ^3.4.0`
 - `typescript: ^5.3.3`
+- `node: 24.x` (engines)
 
 **Componentes UI:**
 - `@radix-ui/*` (Dialog, Dropdown, Label, Select, etc.)
@@ -603,6 +851,8 @@ module.exports = {
 
 ### middleware.ts
 
+**Localização:** `apps/web/middleware.ts`
+
 **Responsabilidades:**
 - Verificar sessão em todas as requisições
 - Redirecionar rotas protegidas sem autenticação
@@ -617,23 +867,88 @@ module.exports = {
 
 ---
 
+## 🤖 Governança de IAs
+
+**Documento Completo:** [apps/web/app/(dashboard)/caixa/docs/Governance_IA.md](./apps/web/app/(dashboard)/caixa/docs/Governance_IA.md)
+
+### Papéis Definidos
+
+**ChatGPT — Orquestrador Técnico & Representante Técnica**
+- Responsabilidades:
+  - Traduz ideias em tarefas técnicas estruturadas
+  - Orquestra uso de outras IAs
+  - Arquitetura de sistemas e planejamento
+  - Revisão lógica de código
+  - Validação de resultados
+- **Regra de Ouro:** Nenhuma IA é acionada sem orientação explícita do ChatGPT
+
+**Manus AI — Auditor Arquitetural**
+- Responsabilidades:
+  - Auditoria arquitetural
+  - Root Cause Analysis
+  - Validação de decisões técnicas
+- **Última Atuação:** Validação da decisão de usar Server Components + Server Actions para módulo /caixa
+
+**Claude — Arquiteto Sênior**
+- Responsabilidades:
+  - Parecer arquitetural com caminhos recomendados (A/B/C)
+  - Identificação de riscos e trade-offs
+  - Código do zero quando solicitado
+  - Refatoração com qualidade
+
+**Cursor — Executor Técnico**
+- Responsabilidades:
+  - Execução de código (um passo por vez)
+  - Criar arquivos e pastas conforme especificado
+  - Correções diretas no projeto
+  - Entrega de diffs e evidências
+- **Filosofia:** "Cursor executa, não pensa"
+
+**Perplexity — Pesquisador e Validador Externo**
+- Responsabilidades:
+  - Pesquisa de versões e breaking changes
+  - Validação de documentação oficial
+  - Verificação de issues conhecidas
+
+### Fluxo Operacional
+
+**Ciclo Padrão:**
+```
+Diagnóstico (ChatGPT) 
+  → Arquitetura (Claude/Manus) 
+  → Decisão (Você) 
+  → Plano (GenSpark) 
+  → Execução (Cursor) 
+  → Validação (ChatGPT)
+```
+
+---
+
 ## 📝 Regras de Uso
 
 ### ✅ FAZER
 
-1. Usar `useAuth()` para acessar estado de autenticação
-2. Usar `DashboardWrapper` nas páginas do dashboard
-3. Usar `getRepositories()` para acessar repositórios
-4. Atualizar cache do store manualmente quando necessário
-5. Manter layouts como Server Components quando possível
+1. Executar `npm run dev` APENAS de dentro de `apps/web`
+2. Colocar `.env.local` APENAS em `apps/web/.env.local`
+3. Usar `useAuth()` para acessar estado de autenticação
+4. Usar `DashboardWrapper` nas páginas do dashboard
+5. Usar `getRepositories()` para acessar repositórios
+6. Atualizar cache do store manualmente quando necessário
+7. Manter layouts como Server Components quando possível
+8. Usar Server Components como fonte de verdade para estado crítico
+9. Usar Server Actions para mutações que precisam de revalidação
 
 ### ❌ NÃO FAZER
 
-1. Importar contextos diretamente em Server Components
-2. Usar `'use client'` em layouts desnecessariamente
-3. Criar repositórios fora da factory
-4. Usar `setInterval` no store (já removido)
-5. Duplicar lógica de autenticação
+1. Executar `npm run dev` da raiz do projeto
+2. Colocar `.env.local` fora de `apps/web/`
+3. Importar contextos diretamente em Server Components
+4. Usar `'use client'` em layouts desnecessariamente
+5. Criar repositórios fora da factory
+6. Usar `setInterval` no store (já removido)
+7. Duplicar lógica de autenticação
+8. Tentar sincronizar estado crítico apenas no client (use Server Components + Server Actions)
+9. Usar `window.location.reload()` como solução permanente (usar `revalidatePath()`)
 
 ---
 
@@ -659,11 +974,45 @@ module.exports = {
 - Não deve entrar em loop
 - Deve mostrar formulário de login
 
+### ✅ Estrutura do Projeto
+- Next.js deve rodar apenas em `apps/web`
+- `.env.local` deve estar em `apps/web/.env.local`
+- Variáveis de ambiente devem ser carregadas corretamente
+
 ---
 
-## 🚀 Próximos Passos
+## 📌 Próximos Passos Imediatos
 
-### Migrações Pendentes
+### 1. Finalizar Implementação do Módulo /caixa
+
+**Status:** Em andamento (Server Component criado, Server Actions pendentes)
+
+**Tarefas:**
+1. ✅ Criar Server Component (`page.tsx`) como fonte de verdade
+2. ✅ Criar Client Component (`CaixaClient.tsx`) para UI
+3. ⏳ Criar Server Actions:
+   - `abrirCaixaAction` - Abre caixa e revalida
+   - `fecharCaixaAction` - Fecha caixa e revalida
+4. ⏳ Implementar `revalidatePath('/caixa')` após mutações
+5. ⏳ Remover componentes legados (`AberturaDeCaixa.tsx`, `FechamentoDeCaixa.tsx`)
+6. ⏳ Testar fluxo completo: Abrir → UI atualiza → Fechar → UI retorna
+
+**Critério de Sucesso:**
+- UI alterna corretamente entre "Abrir Caixa" e "Fechar Caixa"
+- Sem necessidade de `window.location.reload()`
+- Estado sempre sincronizado com o banco
+
+### 2. Correções Backend (Supabase)
+
+**Status:** Pendente
+
+**Tarefas:**
+1. ⏳ Executar migration `010_fix_cash_register_close_function.sql`
+2. ⏳ Validar função `close_cash_register` funcionando corretamente
+3. ⏳ Testar RLS policies de `cash_registers`
+4. ⏳ Verificar se `cash_movements` precisa de correções de RLS
+
+### 3. Migrações Pendentes (Médio Prazo)
 
 1. **Store → React Query**
    - Migrar `lib/store.ts` para React Query
@@ -671,7 +1020,7 @@ module.exports = {
    - Invalidação automática
 
 2. **Componentes Dashboard**
-   - Atualizar todas as páginas para usar `DashboardWrapper`
+   - Atualizar todas as páginas para usar `DashboardWrapper` consistentemente
    - `/pdv`, `/estoque`, `/vendas`
 
 3. **Metadata**
@@ -687,11 +1036,14 @@ module.exports = {
 ## 📚 Referências
 
 - [Next.js App Router](https://nextjs.org/docs/app)
+- [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)
 - [Supabase Auth](https://supabase.com/docs/guides/auth)
+- [Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
 - [shadcn/ui](https://ui.shadcn.com/)
 - [Repository Pattern](https://martinfowler.com/eaaCatalog/repository.html)
 
 ---
 
-**Última atualização:** 2024-12-30
-**Versão:** 1.0.0
+**Última atualização:** 2025-01-02  
+**Versão:** 2.0.0  
+**Status:** ✅ Ativo e Operacional

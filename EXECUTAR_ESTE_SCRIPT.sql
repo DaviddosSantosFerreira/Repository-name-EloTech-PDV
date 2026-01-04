@@ -17,3 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_sales_user_id ON public.sales(user_id);
 
 
 
+
+
+
+

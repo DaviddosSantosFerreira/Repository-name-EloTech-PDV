@@ -34,3 +34,7 @@
 - NÃO tentar corrigir sozinho
 - Aguardar análise e nova instrução
 
+
+
+
+

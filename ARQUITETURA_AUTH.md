@@ -207,3 +207,7 @@ Editar `components/auth/AuthGate.tsx` - lógica de redirecionamento está centra
 
 
 
+
+
+
+

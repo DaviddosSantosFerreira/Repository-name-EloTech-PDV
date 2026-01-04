@@ -6,7 +6,7 @@ import { getBrowserClient } from '@/lib/supabase/client'
 type CashReport = {
   cash_register_id: string
   opened_at: string
-  closed_at: string
+  closed_at: string | null
   initial_amount: number
   expected_amount: number
   final_amount: number
@@ -18,24 +18,35 @@ type CashReport = {
 
 export default function CaixaHistoricoPage() {
   const supabase = getBrowserClient()
+
   const [data, setData] = useState<CashReport[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const load = async () => {
       const { data, error } = await supabase.rpc('get_daily_cash_report')
 
-      if (!error && data) {
-        setData(data)
+      if (error) {
+        setError('Erro ao carregar histórico do caixa.')
+        setLoading(false)
+        return
       }
 
+      setData(data ?? [])
       setLoading(false)
     }
 
     load()
-  }, [supabase])
+  }, [])
 
-  if (loading) return <p>Carregando histórico...</p>
+  if (loading) {
+    return <p>Carregando histórico...</p>
+  }
+
+  if (error) {
+    return <p>{error}</p>
+  }
 
   if (data.length === 0) {
     return <p>Nenhum fechamento encontrado.</p>
@@ -60,7 +71,11 @@ export default function CaixaHistoricoPage() {
           {data.map((row) => (
             <tr key={row.cash_register_id}>
               <td>{new Date(row.opened_at).toLocaleString()}</td>
-              <td>{new Date(row.closed_at).toLocaleString()}</td>
+              <td>
+                {row.closed_at
+                  ? new Date(row.closed_at).toLocaleString()
+                  : '-'}
+              </td>
               <td>R$ {Number(row.initial_amount).toFixed(2)}</td>
               <td>R$ {Number(row.expected_amount).toFixed(2)}</td>
               <td>R$ {Number(row.final_amount).toFixed(2)}</td>

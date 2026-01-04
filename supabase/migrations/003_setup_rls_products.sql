@@ -61,3 +61,7 @@ CREATE POLICY "Apenas admin pode deletar produtos"
 
 
 
+
+
+
+

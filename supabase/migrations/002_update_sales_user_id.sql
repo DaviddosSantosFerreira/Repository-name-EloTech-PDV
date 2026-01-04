@@ -67,3 +67,7 @@ CREATE POLICY "Apenas admin pode deletar vendas"
 
 
 
+
+
+
+
